@@ -24,7 +24,8 @@ exports.callback = () => {
             embed.addFields(
                 {name: 'Memory Heap Usage', value: mem},
                 {name: 'Startup Time', value: timeTaken},
-                {name: "Plugins Loaded", value: `${plugins.size} plugins loaded across ${fileCount} files.`}
+                {name: "Plugins Loaded", value: `${plugins.size} plugins loaded across ${fileCount} files.`},
+                {name: "Source Code", value: `[View Source Code on GitHub](https://github.com/NubTheFatMan/Treehouse-Bot)`}
             );
 
         channel.send({embeds: [embed]});
