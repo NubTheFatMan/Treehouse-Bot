@@ -5,6 +5,8 @@ exports.event = "messageCreate";
 exports.callback = message => {
     if (message.author.bot) return;
 
+    let startedProcessingTime = performance.now();
+
     let prefix = "~";
 
     let pat = [`<@${client.user.id}>`, `<@!${client.user.id}>`];
@@ -34,7 +36,8 @@ exports.callback = message => {
                 if (cmd === call) {
                     ran = true;
                     try {
-                        command.callback(message, args);
+                        let timeToProcessCommand = performance.now() - startedProcessingTime;
+                        command.callback(message, args, timeToProcessCommand);
                     } catch (err) {
                         console.error(err);
                         messageDevs(`**${message.author.tag}** (${message.author.id}) encountered an error in command \`${cmd}\`.\`\`\`\n${err.stack}\`\`\``);
