@@ -1,0 +1,1 @@
+This file only exists so the /userdata folder is on github.
