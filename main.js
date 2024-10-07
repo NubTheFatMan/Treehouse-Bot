@@ -4,8 +4,13 @@ global.startWatch = performance.now();
 global.startupTime = null;
 global.readyTime = null;
 
+
 global.Discord = require('discord.js');
 global.fs      = require('fs');
+
+// Jimp is special and requires this setup
+let {Jimp} = require("jimp");
+global.Jimp    = Jimp;
 
 require('dotenv').config();
 console.log("NPM dependencies loaded and .env loaded.");
