@@ -1,3 +1,5 @@
+exports.name = "Time";
+
 let times = {};
 times.s = 1000;
 times.m = times.s * 60;
@@ -60,3 +62,6 @@ global.formatTime = ms => {
     if (stringArray.length === 0) return "forever";
     return stringArray.join(" ");
 }
+
+exports.parseTime = global.parseTime;
+exports.formatTime = global.formatTime;

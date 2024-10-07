@@ -1,3 +1,5 @@
+exports.name = "Managers";
+
 global.refreshEvents = () => {
     for (let event of client.eventNames()) {
         client.removeAllListeners(event);
@@ -23,3 +25,7 @@ global.calculateSlashCommandsArray = () => {
     });
     return apiSlashCommandInput;
 }
+
+exports.refreshEvent = global.refreshEvent;
+exports.refreshEvents = global.refreshEvents;
+exports.calculateSlashCommandsArray = global.calculateSlashCommandsArray;

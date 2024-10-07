@@ -1,3 +1,5 @@
+exports.name = "Message";
+
 let startupChannel;
 global.messageDevs = message => {
 	if (!client.isReady())
@@ -60,3 +62,6 @@ global.parseArgs = function(str, adv = true) {
 	}
 	return adv ? [advOut, out] : out;	//If advanced, return both advanced and normal output, otherwise just return the output
 }
+
+exports.messageDevs = global.messageDevs;
+exports.parseArgs = global.parseArgs;
