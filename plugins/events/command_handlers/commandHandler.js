@@ -34,13 +34,19 @@ exports.callback = message => {
         if (can) {
             for (let call of command.calls) {
                 if (cmd === call) {
+                    // Update the users last command ran timestamp
+                    let dataManager = plugins.get("User Data Manager");
+                    let data = dataManager.getUserData(message.author.id);
+                    data.lastCommandTimestamp = message.createdTimestamp;
+                    dataManager.saveUserData(message.author.id);
+                    
                     ran = true;
                     try {
                         let timeToProcessCommand = performance.now() - startedProcessingTime;
                         command.callback(message, args, timeToProcessCommand);
                     } catch (err) {
                         console.error(err);
-                        messageDevs(`**${message.author.tag}** (${message.author.id}) encountered an error in command \`${cmd}\`.\`\`\`\n${err.stack}\`\`\``);
+                        messageDevs(`<@${message.author.id}> (${message.author.id}) encountered an error in command \`${cmd}\`.\`\`\`\n${err.stack}\`\`\``);
                         message.reply(`An error occured while executing the command \`${name}\`. Developers have been notified, so you don't need to do anything!`).catch(console.error);
                     } finally {
                         break;
