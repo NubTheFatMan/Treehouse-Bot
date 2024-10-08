@@ -23,7 +23,7 @@ exports.callback = (message, args) => {
     try {
         let start = performance.now();
         let result = eval(code);
-        let time = `${(performance.now() - start).toFixed(1)} ms`;
+        let time = `${((performance.now() - start) * 1000).toFixed(1)} μs`;
 
         let msgObj = {};
 
