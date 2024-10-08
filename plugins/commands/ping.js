@@ -11,7 +11,7 @@ exports.callback = (message, args, timeToProcessCommand) => {
     message.reply('Ponging...').then(msg => {
         let totalDif = msg.createdTimestamp - message.createdTimestamp;
         let ping = client.ws.ping;
-        msg.edit(`Pong! Took **${totalDif}ms** to respond.\nLatency to Discord servers is about **${ping} ms**\nTime to process command: **${(timeToProcessCommand * 1000).toFixed(3)} μs** or **${timeToProcessCommand.toFixed(3)} ms**`).catch(console.error);
+        msg.edit(`Pong! Took **${totalDif}ms** to respond.\nLatency to Discord servers is about **${ping} ms**\nTime to process command: **${(timeToProcessCommand * 1000).toFixed(1)} μs** or **${timeToProcessCommand.toFixed(4)} ms**`).catch(console.error);
     }).catch(console.error);
 }
 
