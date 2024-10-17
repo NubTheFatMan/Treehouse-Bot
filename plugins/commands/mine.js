@@ -11,30 +11,40 @@ exports.oreChances = {
     diamond: 1, //  3% chance
 }
 
-let dataManagerReference;
+exports.oreValue = {
+    coal: 8.50,    // total value based off 25% chance: $212.50
+    copper: 14.30, // Total value based off 20% chance: $286.00
+    iron: 24.98,   // Total value based off 10% chance: $249.80
+    gold: 42.34,   // Total value based off 7% chance: $296.38
+    diamond: 79.43 // Total value based off 3% chance: $238.29
+}                  // Grand total based off ore chances: $1,282.97
+
+exports.expectedOreCounts = {
+    coal: 25,
+    copper: 20,
+    iron: 10,
+    gold: 7,
+    diamond: 3
+}
+
+exports.mineActions = {
+    MINE: 0,
+    SCAN: 1,
+    BOMB: 2
+}
+
 
 // Does this user's mine need generated?
-exports.shouldGenerateMine = (id) => {
-    if (typeof id !== "string")
-        throw new Error("Bad argument #1: Expected a string, got " + trueTypeof(id));
+exports.shouldGenerateMine = (data) => {
+    if (!(data instanceof Object))
+        throw new Error("Bad argument #1: Expected an Object, got " + trueTypeof(id));
 
-    if (!dataManagerReference)
-        dataManagerReference = plugins.get("User Data Manager");
-
-    let data = dataManagerReference.users.get(id);
-    if (!data)
-        throw new Error("There is no data loaded in memory for " + id);
-
-    if (!data.mine) {
-        data.mine = Object.assign({}, dataManagerReference.templateUser.mine);
+    if (Number.isNaN(data.mine.generatedTimestamp))
         return true;
-    } else {
-        if (Number.isNaN(data.mine.generatedTimestamp))
-            return true;
-        else if (Date.now() - data.mine.generatedTimestamp >= 86400000) // The mine should be regenerated every 24 hours.
-            return true;
-    }
-    return false;
+    else if (Date.now() - data.mine.generatedTimestamp >= 86400000) // The mine should be regenerated every 24 hours.
+        return true;
+    else
+        return false;
 }
 
 exports.mineLetters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
@@ -47,16 +57,9 @@ exports.blockTemplate = {
     visible: false
 }
 
-exports.generateMine = (id) => {
-    if (typeof id !== "string")
-        throw new Error("Bad argument #1: Expected a string, got " + trueTypeof(id));
-
-    if (!dataManagerReference)
-        dataManagerReference = plugins.get("User Data Manager");
-
-    let data = dataManagerReference.users.get(id);
-    if (!data)
-        throw new Error("There is no data loaded in memory for " + id);
+exports.generateMine = (data) => {
+    if (!(data instanceof Object))
+        throw new Error("Bad argument #1: Expected an Object, got " + trueTypeof(id));
 
     let blocks = data.mine.blocks;
     let generationTimeStart = performance.now();
@@ -67,20 +70,8 @@ exports.generateMine = (id) => {
             block.key = this.mineLetters[x] + this.mineLetters[y];
             block.x = x;
             block.y = y;
-            
-            let rng = Math.random();
-            if (rng < this.oreChances.stone)
-                block.type = "stone";
-            else if (rng < this.oreChances.coal)
-                block.type = "coal";
-            else if (rng < this.oreChances.copper)
-                block.type = "copper";
-            else if (rng < this.oreChances.iron)
-                block.type = "iron";
-            else if (rng < this.oreChances.gold)
-                block.type = "gold";
-            else if (rng < this.oreChances.diamond)
-                block.type = "diamond";
+
+            block.type = "null";
 
             blocks[block.key] = block;
         }
@@ -88,26 +79,19 @@ exports.generateMine = (id) => {
 
     data.mine.generatedTimestamp = Date.now();
 
-    dataManagerReference.saveUserData(id);
+    data.save();
 
     return performance.now() - generationTimeStart;
 }
 
-exports.callback = async (message, args) => {
-    await message.channel.sendTyping();
-
-    let mineGenerationTime = NaN;
-    if (this.shouldGenerateMine(message.author.id)) {
-        mineGenerationTime = this.generateMine(message.author.id);
-    }
-
+exports.generateMineImage = async (mine) => {
     let generationStart = performance.now();
 
-    let generatedImage = new Jimp({width: 300, height: 300, color: 0x00000000});
+    let generatedImage = new Jimp({width: 330, height: 330, color: 0x191e23ff});
 
     // Apparently caching these doesn't actually save performance time. They must already get cached internally by Jimp
     let imagesDir = process.cwd() + '/images/';
-    let letterOverlay = await Jimp.read(imagesDir + 'Letter_Overlay.png');
+    let letterOverlay = await Jimp.read(imagesDir + 'letteroverlay.png');
     let stone =         await Jimp.read(imagesDir + 'stone2.png');
     let stonedark =     await Jimp.read(imagesDir + 'stonedark.png');
     let coal =          await Jimp.read(imagesDir + 'coal.png');
@@ -116,39 +100,31 @@ exports.callback = async (message, args) => {
     let gold =          await Jimp.read(imagesDir + 'gold.png');
     let diamond =       await Jimp.read(imagesDir + 'diamond.png');
 
-    let mine = dataManagerReference.users.get(message.author.id).mine.blocks;
     for (let y = 0; y < this.mineLetters.length; y++) {
         for (let x = 0; x < this.mineLetters.length; x++) {
             let block = mine[this.mineLetters[x] + this.mineLetters[y]];
 
             if (block.visible && !block.mined)
-                generatedImage.blit({src: stone, x: x * 30, y: y * 30});
+                generatedImage.blit({src: stone, x: (x + 1) * 30, y: (y + 1) * 30});
             else if (block.mined)
-                generatedImage.blit({src: stonedark, x: x * 30, y: y * 30});
-            else {
-                for (let pixelY = 0; pixelY < 30; pixelY++) {
-                    for (let pixelX = 0; pixelX < 30; pixelX++) {
-                        generatedImage.setPixelColor(0x191e23ff, (x * 30) + pixelX, (y * 30) + pixelY);
-                    }
-                }
-            }
+                generatedImage.blit({src: stonedark, x: (x + 1) * 30, y: (y + 1) * 30});
 
             if (block.visible || block.mined) {
                 switch(block.type) {
                     case "coal":
-                        generatedImage.blit({src: coal, x: x * 30, y: y * 30});
+                        generatedImage.blit({src: coal, x: (x + 1) * 30, y: (y + 1) * 30});
                     break;
                     case "copper":
-                        generatedImage.blit({src: copper, x: x * 30, y: y * 30});
+                        generatedImage.blit({src: copper, x: (x + 1) * 30, y: (y + 1) * 30});
                     break;
                     case "iron":
-                        generatedImage.blit({src: iron, x: x * 30, y: y * 30});
+                        generatedImage.blit({src: iron, x: (x + 1) * 30, y: (y + 1) * 30});
                     break;
                     case "gold":
-                        generatedImage.blit({src: gold, x: x * 30, y: y * 30});
+                        generatedImage.blit({src: gold, x: (x + 1) * 30, y: (y + 1) * 30});
                     break;
                     case "diamond":
-                        generatedImage.blit({src: diamond, x: x * 30, y: y * 30});
+                        generatedImage.blit({src: diamond, x: (x + 1) * 30, y: (y + 1) * 30});
                     break;
                 }
             }
@@ -157,11 +133,182 @@ exports.callback = async (message, args) => {
     
     generatedImage.blit({src: letterOverlay, x: 0, y: 0});
     let buffer = await generatedImage.getBuffer("image/png");
-
     let generationTime = performance.now() - generationStart;
+
+    return [buffer, generationTime];
+}
+
+exports.mineBlock = (data, target, action = this.mineActions.MINE) => {
+    if (!(data instanceof Object))
+        throw new Error("Bad argument #1: Expected a string, got " + trueTypeof(id));
+
+    let blocks = data.mine.blocks;
+    if (!(blocks[target] instanceof Object))
+        throw new Error("Invalid position");
+
+    let xPos = this.mineLetters.indexOf(target[0]);
+    let yPos = this.mineLetters.indexOf(target[1]);
+
+    if (xPos === -1 || yPos === -1)
+        throw new Error("Invalid position? How??");
+
+    
+    let radius = 1;
+    if (action === this.mineActions.SCAN || action === this.mineActions.BOMB)
+        radius = 2;
+
+    let borderLeft = Math.max(0, xPos - radius);
+    let borderRight = Math.min(this.mineLetters.length - 1, xPos + radius);
+    
+    let borderTop = Math.max(0, yPos - radius);
+    let borderBottom = Math.min(this.mineLetters.length - 1, yPos + radius);
+    
+    let minedBlocks = [];
+    for (let y = borderTop; y <= borderBottom; y++) {
+        for (let x = borderLeft; x <= borderRight; x++) {
+            let pos = this.mineLetters[x] + this.mineLetters[y];
+            let block = data.mine.blocks[pos];
+            if (!block)
+                throw new Error(`Invalid position ${x}, ${y} (${pos})`);
+
+            if (block.type === "null") {
+                let rng = Math.random();
+                if (rng < this.oreChances.stone)
+                    block.type = "stone";
+                else if (rng < this.oreChances.coal)
+                    block.type = "coal";
+                else if (rng < this.oreChances.copper)
+                    block.type = "copper";
+                else if (rng < this.oreChances.iron)
+                    block.type = "iron";
+                else if (rng < this.oreChances.gold)
+                    block.type = "gold";
+                else if (rng < this.oreChances.diamond)
+                    block.type = "diamond";
+            }
+            block.visible = true;
+
+            if (action === this.mineActions.MINE && pos === target) {
+                if (!block.mined)
+                    minedBlocks.push(block);
+                block.mined = true;
+            } else if (action === this.mineActions.BOMB && x > borderLeft && x < borderRight && y > borderTop && y < borderBottom) {
+                if (!block.mined)
+                    minedBlocks.push(block);
+                block.mined = true;
+            }
+        }
+    }
+
+    data.save();
+
+    return minedBlocks;
+}
+
+exports.calculateRemainingValue = (mine) => {
+    let minedValue = 0;
+    let potentialRemainingValue = 0;
+
+    let oreCounts = {}
+
+    for (let y = 0; y < this.mineLetters.length; y++) {
+        for (let x = 0; x < this.mineLetters.length; x++) {
+            let position = this.mineLetters[x] + this.mineLetters[y];
+            let block = mine[position];
+        }
+    }
+}
+
+exports.callback = async (message, args, data) => {
+    await message.channel.sendTyping();
+
+    let mineGenerationTime = NaN;
+    if (this.shouldGenerateMine(data)) {
+        mineGenerationTime = this.generateMine(data);
+    }
+
+    let minedBlocks = [];
+    if (args.length > 0) {
+        let position = args.shift().toLowerCase();
+        if (position.length !== 2) 
+            return message.reply("Invalid position. Must be 2 letters long, each letter ranging from a-j.");
+
+        let action = this.mineActions.MINE;
+        if (args.length > 0) {
+            switch(args.shift().toLowerCase()) {
+                case "mine": {
+                    action = this.mineActions.MINE;
+                } break;
+
+                case "scan": {
+                    action = this.mineActions.SCAN;
+                } break;
+                
+                case "bomb": {
+                    action = this.mineActions.BOMB;
+                } break; 
+
+                default: {
+                    return await message.reply('Invalid mine action on **' + position + '**');
+                } break;
+            }
+        }
+
+        minedBlocks = this.mineBlock(data, position, action);
+    }
+
+    let [buffer, generationTime] = await this.generateMineImage(data.mine.blocks);
 
     let messageText = `Generated mine image in \`${generationTime.toFixed(2)} ms\``;
     if (!Number.isNaN(mineGenerationTime))
         messageText = `Mine regenerated! Took \`${mineGenerationTime.toFixed(2)} ms\`\n${messageText}`;
+
+    if (minedBlocks.length > 0) {
+        let blocks = [];
+        for (let block of minedBlocks) {
+            if (block.type === "stone")
+                blocks.push(`Mined ${emojis[block.type]} **${block.type}** from **${block.key}**`);
+            else
+                blocks.push(`Mined block **${block.key}** and got ${emojis[block.type]} **${block.type}**`);
+        }
+        messageText += `\n${blocks.join('\n')}`;
+    }
     await message.reply({content: messageText, files: [buffer]});
+}
+
+exports.commandObject = {
+    name: "mine",
+    description: "Displays your 10x10 mine image.",
+    options: [
+        {
+            name: "position",
+            description: "Must be two letters long ranging from aa to jj.",
+            type: 3,
+            min_length: 2,
+            max_length: 2
+        }
+    ]
+}
+
+exports.interactionCallback = async (interaction) => {
+    await interaction.reply('This command is not complete.');
+
+    // let mineGenerationTime = NaN;
+    // if (this.shouldGenerateMine(interaction.user.id)) {
+    //     mineGenerationTime = this.generateMine(interaction.user.id);
+    // }
+    // let mine = dataManagerReference.users.get(interaction.user.id).mine.blocks;
+
+    // let target = interaction.options.getString("position", false);
+    // if (target) {
+    //     if (!(mine[target] instanceof Object))
+    //         return await interaction.editReply(`**${target}** is not a valid position.`);
+    // }
+
+    // let [buffer, generationTime] = await this.generateMineImage(mine);
+
+    // let messageText = `Generated mine image in \`${generationTime.toFixed(2)} ms\``;
+    // if (!Number.isNaN(mineGenerationTime))
+    //     messageText = `Mine regenerated! Took \`${mineGenerationTime.toFixed(2)} ms\`\n${messageText}`;
+    // await interaction.editReply({content: messageText, files: [buffer]});
 }
