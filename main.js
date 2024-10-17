@@ -19,10 +19,8 @@ let intents = Discord.GatewayIntentBits;
 global.client = new Discord.Client({
     intents: [
         intents.Guilds,
-        intents.GuildMembers,
         intents.GuildMessages,
         intents.GuildMessageReactions,
-        intents.GuildModeration,
         intents.MessageContent
     ]
 });
