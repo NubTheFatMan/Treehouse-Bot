@@ -58,3 +58,73 @@ exports.saveUserData = (id) => {
         messageDevs(`Unable to save data for <@${id}>: \`\`\`\n${err.stack}\`\`\``);
     }
 }
+
+class UserData {
+    static users = new Map();
+    static dataFolder = process.cwd() + '/userdata/users/';
+    static templateUser = {
+        id: "null",
+        createdTimestamp: NaN,
+        lastCommandTimestamp: NaN,
+        inventory: {
+            currency: 0,
+            spentCurrency: 0,
+            items: {}
+        },
+        mine: {
+            generatedTimestamp: NaN,
+            lastMinedTimestamp: NaN,
+            blocks: {}
+        }
+    }
+
+    static get(id) {
+        if (typeof id !== "string")
+            throw new Error("Bad argument #1: Expected a string, got " + trueTypeof(id));
+    
+        let data = this.users.get(id);
+        if (data)
+            return data;
+    
+        try {
+            let dataJson = JSON.parse(fs.readFileSync(this.dataFolder + id + '.json'));
+            if (dataJson instanceof Object) {
+                return new this(dataJson);
+            }
+        } catch (error) {
+            return new this(id);
+        }
+    }
+
+    constructor(data) {
+        if (!(data instanceof Object) && typeof data !== "string")
+            throw new Error("Expected an argment or string, got " + trueTypeof(data));
+
+        Object.assign(this, this.constructor.templateUser);
+
+        if (typeof data === "string") {
+            this.id = data;
+            this.createdTimestamp = Date.now();
+        } else {
+            Object.assign(this, data);
+        }
+        this.constructor.users.set(this.id, this);
+    }
+
+    get valid() {
+        return typeof this.id === "string" && this.id !== "null";
+    }
+
+    get filePath() {
+        return this.constructor.dataFolder + this.id + '.json';
+    }
+
+    save() {
+        try {
+            fs.writeFileSync(this.filePath, JSON.stringify(this));
+        } catch (err) {
+            messageDevs(`Unable to save data for <@${this.id}>: \`\`\`\n${err.stack}\`\`\``);
+        }
+    }
+}
+exports.UserData = UserData;

@@ -2,6 +2,8 @@ exports.type = 'event';
 exports.name = "Command Handler";
 exports.event = "messageCreate";
 
+let dataManager;
+
 exports.callback = message => {
     if (message.author.bot) return;
 
@@ -35,15 +37,20 @@ exports.callback = message => {
             for (let call of command.calls) {
                 if (cmd === call) {
                     // Update the users last command ran timestamp
-                    let dataManager = plugins.get("User Data Manager");
-                    let data = dataManager.getUserData(message.author.id);
+                    if (!dataManager)
+                        dataManager = plugins.get("User Data Manager").UserData;
+                    let data = dataManager.get(message.author.id);
                     data.lastCommandTimestamp = message.createdTimestamp;
-                    dataManager.saveUserData(message.author.id);
+                    data.save();
+                    // let dataManager = plugins.get("User Data Manager");
+                    // let data = dataManager.getUserData(message.author.id);
+                    // data.lastCommandTimestamp = message.createdTimestamp;
+                    // dataManager.saveUserData(message.author.id);
                     
                     ran = true;
                     try {
                         let timeToProcessCommand = performance.now() - startedProcessingTime;
-                        command.callback(message, args, timeToProcessCommand);
+                        command.callback(message, args, data, timeToProcessCommand);
                     } catch (err) {
                         console.error(err);
                         messageDevs(`<@${message.author.id}> (${message.author.id}) encountered an error in command \`${cmd}\`.\`\`\`\n${err.stack}\`\`\``);
