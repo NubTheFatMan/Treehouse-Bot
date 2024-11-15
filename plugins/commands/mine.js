@@ -30,7 +30,8 @@ exports.expectedOreCounts = {
 exports.mineActions = {
     MINE: 0,
     SCAN: 1,
-    BOMB: 2
+    BOMB: 2,
+    SHOW: 3
 }
 
 
@@ -143,59 +144,89 @@ exports.mineBlock = (data, target, action = this.mineActions.MINE) => {
         throw new Error("Bad argument #1: Expected a string, got " + trueTypeof(id));
 
     let blocks = data.mine.blocks;
-    if (!(blocks[target] instanceof Object))
-        throw new Error("Invalid position");
-
-    let xPos = this.mineLetters.indexOf(target[0]);
-    let yPos = this.mineLetters.indexOf(target[1]);
-
-    if (xPos === -1 || yPos === -1)
-        throw new Error("Invalid position? How??");
-
-    
-    let radius = 1;
-    if (action === this.mineActions.SCAN || action === this.mineActions.BOMB)
-        radius = 2;
-
-    let borderLeft = Math.max(0, xPos - radius);
-    let borderRight = Math.min(this.mineLetters.length - 1, xPos + radius);
-    
-    let borderTop = Math.max(0, yPos - radius);
-    let borderBottom = Math.min(this.mineLetters.length - 1, yPos + radius);
     
     let minedBlocks = [];
-    for (let y = borderTop; y <= borderBottom; y++) {
-        for (let x = borderLeft; x <= borderRight; x++) {
-            let pos = this.mineLetters[x] + this.mineLetters[y];
-            let block = data.mine.blocks[pos];
-            if (!block)
-                throw new Error(`Invalid position ${x}, ${y} (${pos})`);
+    if (target) {
+        if (!(blocks[target] instanceof Object))
+            throw new Error("Invalid position");
 
-            if (block.type === "null") {
-                let rng = Math.random();
-                if (rng < this.oreChances.stone)
-                    block.type = "stone";
-                else if (rng < this.oreChances.coal)
-                    block.type = "coal";
-                else if (rng < this.oreChances.copper)
-                    block.type = "copper";
-                else if (rng < this.oreChances.iron)
-                    block.type = "iron";
-                else if (rng < this.oreChances.gold)
-                    block.type = "gold";
-                else if (rng < this.oreChances.diamond)
-                    block.type = "diamond";
+        let xPos = this.mineLetters.indexOf(target[0]);
+        let yPos = this.mineLetters.indexOf(target[1]);
+
+        if (xPos === -1 || yPos === -1)
+            throw new Error("Invalid position? How??");
+        
+        let radius = 1;
+        if (action === this.mineActions.SCAN || action === this.mineActions.BOMB)
+            radius = 2;
+
+        let borderLeft = Math.max(0, xPos - radius);
+        let borderRight = Math.min(this.mineLetters.length - 1, xPos + radius);
+        
+        let borderTop = Math.max(0, yPos - radius);
+        let borderBottom = Math.min(this.mineLetters.length - 1, yPos + radius);
+        
+        for (let y = borderTop; y <= borderBottom; y++) {
+            for (let x = borderLeft; x <= borderRight; x++) {
+                let pos = this.mineLetters[x] + this.mineLetters[y];
+                let block = data.mine.blocks[pos];
+                if (!block)
+                    throw new Error(`Invalid position ${x}, ${y} (${pos})`);
+
+                if (block.type === "null") {
+                    let rng = Math.random();
+                    if (rng < this.oreChances.stone)
+                        block.type = "stone";
+                    else if (rng < this.oreChances.coal)
+                        block.type = "coal";
+                    else if (rng < this.oreChances.copper)
+                        block.type = "copper";
+                    else if (rng < this.oreChances.iron)
+                        block.type = "iron";
+                    else if (rng < this.oreChances.gold)
+                        block.type = "gold";
+                    else if (rng < this.oreChances.diamond)
+                        block.type = "diamond";
+                }
+                block.visible = true;
+
+                if (action === this.mineActions.MINE && pos === target) {
+                    if (!block.mined)
+                        minedBlocks.push(block);
+                    block.mined = true;
+                } else if (action === this.mineActions.BOMB && x > borderLeft && x < borderRight && y > borderTop && y < borderBottom) {
+                    if (!block.mined)
+                        minedBlocks.push(block);
+                    block.mined = true;
+                }
             }
-            block.visible = true;
+        }
+    }
 
-            if (action === this.mineActions.MINE && pos === target) {
-                if (!block.mined)
-                    minedBlocks.push(block);
-                block.mined = true;
-            } else if (action === this.mineActions.BOMB && x > borderLeft && x < borderRight && y > borderTop && y < borderBottom) {
-                if (!block.mined)
-                    minedBlocks.push(block);
-                block.mined = true;
+    if (action === this.mineActions.SHOW) {
+        for (let y = 0; y < this.mineLetters.length; y++) {
+            for (let x = 0; x < this.mineLetters.length; x++) {
+                let pos = this.mineLetters[x] + this.mineLetters[y];
+                let block = data.mine.blocks[pos];
+                if (!block)
+                    throw new Error(`Invalid position ${x}, ${y} (${pos})`);
+
+                if (block.type === "null") {
+                    let rng = Math.random();
+                    if (rng < this.oreChances.stone)
+                        block.type = "stone";
+                    else if (rng < this.oreChances.coal)
+                        block.type = "coal";
+                    else if (rng < this.oreChances.copper)
+                        block.type = "copper";
+                    else if (rng < this.oreChances.iron)
+                        block.type = "iron";
+                    else if (rng < this.oreChances.gold)
+                        block.type = "gold";
+                    else if (rng < this.oreChances.diamond)
+                        block.type = "diamond";
+                }
+                block.visible = true;
             }
         }
     }
@@ -207,16 +238,56 @@ exports.mineBlock = (data, target, action = this.mineActions.MINE) => {
 
 exports.calculateRemainingValue = (mine) => {
     let minedValue = 0;
+    let revealedValue = 0;
     let potentialRemainingValue = 0;
 
-    let oreCounts = {}
+    let oreCounts = {coal: 0, copper: 0, iron: 0, gold: 0, diamond: 0}
+    let minedCounts = {coal: 0, copper: 0, iron: 0, gold: 0, diamond: 0}
 
     for (let y = 0; y < this.mineLetters.length; y++) {
         for (let x = 0; x < this.mineLetters.length; x++) {
             let position = this.mineLetters[x] + this.mineLetters[y];
             let block = mine[position];
+
+            if (!oreCounts[block.type])
+                oreCounts[block.type] = 0;
+            oreCounts[block.type]++;
+            
+            if (block.mined) {
+                minedValue += this.oreValue[block.type];
+
+                if (!minedCounts[block.type])
+                    minedCounts[block.type] = 0;
+                minedCounts[block.type]++;
+            }
         }
     }
+
+    let revealedCoalValue    = oreCounts.coal    * this.oreValue.coal;
+    let revealedCopperValue  = oreCounts.copper  * this.oreValue.copper;
+    let revealedIronValue    = oreCounts.iron    * this.oreValue.iron;
+    let revealedGoldValue    = oreCounts.gold    * this.oreValue.gold;
+    let revealedDiamondValue = oreCounts.diamond * this.oreValue.diamond;
+
+    revealedValue = revealedCoalValue + revealedCopperValue + revealedIronValue + revealedGoldValue + revealedDiamondValue;
+    revealedValue -= minedValue;
+
+    let remainingCoalValue    = Math.max(0, this.expectedOreCounts.coal    - oreCounts.coal)    * this.oreValue.coal;
+    let remainingCopperValue  = Math.max(0, this.expectedOreCounts.copper  - oreCounts.copper)  * this.oreValue.copper;
+    let remainingIronValue    = Math.max(0, this.expectedOreCounts.iron    - oreCounts.iron)    * this.oreValue.iron;
+    let remainingGoldValue    = Math.max(0, this.expectedOreCounts.gold    - oreCounts.gold)    * this.oreValue.gold;
+    let remainingDiamondValue = Math.max(0, this.expectedOreCounts.diamond - oreCounts.diamond) * this.oreValue.diamond;
+
+    potentialRemainingValue = remainingCoalValue + remainingCopperValue + remainingIronValue + remainingGoldValue + remainingDiamondValue;
+    potentialRemainingValue -= minedValue;
+
+    //let total = this.mineLetters.length * this.mineLetters.length;
+
+    // let expectedCounts = {
+    //     coal: 
+    // }
+
+    return [minedValue, revealedValue, potentialRemainingValue];
 }
 
 exports.callback = async (message, args, data) => {
@@ -230,38 +301,51 @@ exports.callback = async (message, args, data) => {
     let minedBlocks = [];
     if (args.length > 0) {
         let position = args.shift().toLowerCase();
-        if (position.length !== 2) 
-            return message.reply("Invalid position. Must be 2 letters long, each letter ranging from a-j.");
+        switch (position) {
+            case "reveal": case "show": {
+                if (!devs.includes(message.author.id))
+                    return message.reply("This is a developer only command.");
+                this.mineBlock(data, undefined, this.mineActions.SHOW);
+            } break; 
 
-        let action = this.mineActions.MINE;
-        if (args.length > 0) {
-            switch(args.shift().toLowerCase()) {
-                case "mine": {
-                    action = this.mineActions.MINE;
-                } break;
-
-                case "scan": {
-                    action = this.mineActions.SCAN;
-                } break;
-                
-                case "bomb": {
-                    action = this.mineActions.BOMB;
-                } break; 
-
-                default: {
-                    return await message.reply('Invalid mine action on **' + position + '**');
-                } break;
-            }
+            default: {
+                if (position.length !== 2) 
+                    return message.reply("Invalid position. Must be 2 letters long, each letter ranging from a-j.");
+        
+                let action = this.mineActions.MINE;
+                if (args.length > 0) {
+                    switch(args.shift().toLowerCase()) {
+                        case "mine": {
+                            action = this.mineActions.MINE;
+                        } break;
+        
+                        case "scan": {
+                            action = this.mineActions.SCAN;
+                        } break;
+                        
+                        case "bomb": {
+                            action = this.mineActions.BOMB;
+                        } break; 
+        
+                        default: {
+                            return await message.reply('Invalid mine action on **' + position + '**');
+                        } break;
+                    }
+                }
+        
+                minedBlocks = this.mineBlock(data, position, action);
+            } break;
         }
-
-        minedBlocks = this.mineBlock(data, position, action);
     }
 
     let [buffer, generationTime] = await this.generateMineImage(data.mine.blocks);
+    let [minedValue, revealedValue, remainingValue] = this.calculateRemainingValue(data.mine.blocks);
 
     let messageText = `Generated mine image in \`${generationTime.toFixed(2)} ms\``;
     if (!Number.isNaN(mineGenerationTime))
         messageText = `Mine regenerated! Took \`${mineGenerationTime.toFixed(2)} ms\`\n${messageText}`;
+
+    messageText += `\n\nMined value: **$${minedValue.toFixed(2)}**\nRevealed value: **$${revealedValue}**\nEstimated remaining value: **$${remainingValue.toFixed(2)}**\n**$${(remainingValue + minedValue + revealedValue).toFixed(2)}** total estimated value.\n`;
 
     if (minedBlocks.length > 0) {
         let blocks = [];
