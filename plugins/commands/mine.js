@@ -94,7 +94,7 @@ exports.generateMineImage = async (mine) => {
     let imagesDir = process.cwd() + '/images/';
     let letterOverlay = await Jimp.read(imagesDir + 'letteroverlay.png');
     let stone =         await Jimp.read(imagesDir + 'stone2.png');
-    let stonedark =     await Jimp.read(imagesDir + 'stonedark.png');
+    let stonedark =     await Jimp.read(imagesDir + 'stonedark2.jpg');
     let coal =          await Jimp.read(imagesDir + 'coal.png');
     let copper =        await Jimp.read(imagesDir + 'copper.png');
     let iron =          await Jimp.read(imagesDir + 'iron.png');
@@ -281,6 +281,9 @@ exports.calculateRemainingValue = (mine) => {
     potentialRemainingValue = remainingCoalValue + remainingCopperValue + remainingIronValue + remainingGoldValue + remainingDiamondValue;
     potentialRemainingValue -= minedValue;
 
+    if (!oreCounts.null || oreCounts.null === 0) 
+        potentialRemainingValue = 0;
+
     //let total = this.mineLetters.length * this.mineLetters.length;
 
     // let expectedCounts = {
@@ -345,7 +348,12 @@ exports.callback = async (message, args, data) => {
     if (!Number.isNaN(mineGenerationTime))
         messageText = `Mine regenerated! Took \`${mineGenerationTime.toFixed(2)} ms\`\n${messageText}`;
 
-    messageText += `\n\nMined value: **$${minedValue.toFixed(2)}**\nRevealed value: **$${revealedValue}**\nEstimated remaining value: **$${remainingValue.toFixed(2)}**\n**$${(remainingValue + minedValue + revealedValue).toFixed(2)}** total estimated value.\n`;
+    messageText += `\n\nMined value: ${emojis.coin}**${minedValue.toFixed(2)}**\nRevealed value: ${emojis.coin}**${revealedValue.toFixed(2)}**`;
+
+    if (remainingValue > 0) {
+        messageText += `\nEstimated remaining value: ${emojis.coin}**${remainingValue.toFixed(2)}**`;
+    }
+    messageText += `\n${emojis.coin}**${(remainingValue + minedValue + revealedValue).toFixed(2)}** total estimated value.\n`;
 
     if (minedBlocks.length > 0) {
         let blocks = [];
