@@ -8,8 +8,8 @@ exports.removeFormatting = global.removeFormatting;
 // typeof converts all types that are derived from Object to "object", disregarding classes
 // This will instead get the class name
 // Examples:
-//      typeof (new Map()) == "object"
-//      trueTypeof (newMap()) == "Map"
+//          typeof (new Map()) = "object"
+//      trueTypeof (new Map()) = "Map"
 global.trueTypeof = value => {
     if (value == undefined) // == here captures both "undefined" and "null". Neither of these types have the .__proto__ property
         return String(value);
