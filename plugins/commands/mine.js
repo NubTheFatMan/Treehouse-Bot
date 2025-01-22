@@ -92,47 +92,35 @@ exports.generateMineImage = async (mine) => {
 
     // Apparently caching these doesn't actually save performance time. They must already get cached internally by Jimp
     let imagesDir = process.cwd() + '/images/';
-    let letterOverlay = await Jimp.read(imagesDir + 'letteroverlay.png');
-    let stone =         await Jimp.read(imagesDir + 'stone2.png');
-    let stonedark =     await Jimp.read(imagesDir + 'stonedark2.jpg');
-    let coal =          await Jimp.read(imagesDir + 'coal.png');
-    let copper =        await Jimp.read(imagesDir + 'copper.png');
-    let iron =          await Jimp.read(imagesDir + 'iron.png');
-    let gold =          await Jimp.read(imagesDir + 'gold.png');
-    let diamond =       await Jimp.read(imagesDir + 'diamond.png');
+    let images    = {};
+
+    images.letterOverlay = await Jimp.read(imagesDir + 'letteroverlay.png');
+    images.stone         = await Jimp.read(imagesDir + 'stone2.png');
+    images.stonedark     = await Jimp.read(imagesDir + 'stonedark2.jpg');
+    images.coal          = await Jimp.read(imagesDir + 'coal.png');
+    images.copper        = await Jimp.read(imagesDir + 'copper.png');
+    images.iron          = await Jimp.read(imagesDir + 'iron.png');
+    images.gold          = await Jimp.read(imagesDir + 'gold.png');
+    images.diamond       = await Jimp.read(imagesDir + 'diamond.png');
 
     for (let y = 0; y < this.mineLetters.length; y++) {
         for (let x = 0; x < this.mineLetters.length; x++) {
             let block = mine[this.mineLetters[x] + this.mineLetters[y]];
 
-            if (block.visible && !block.mined)
-                generatedImage.blit({src: stone, x: (x + 1) * 30, y: (y + 1) * 30});
-            else if (block.mined)
-                generatedImage.blit({src: stonedark, x: (x + 1) * 30, y: (y + 1) * 30});
+            let [pixelX, pixelY] = [(x + 1) * 30, (y + 1) * 30];
 
-            if (block.visible || block.mined) {
-                switch(block.type) {
-                    case "coal":
-                        generatedImage.blit({src: coal, x: (x + 1) * 30, y: (y + 1) * 30});
-                    break;
-                    case "copper":
-                        generatedImage.blit({src: copper, x: (x + 1) * 30, y: (y + 1) * 30});
-                    break;
-                    case "iron":
-                        generatedImage.blit({src: iron, x: (x + 1) * 30, y: (y + 1) * 30});
-                    break;
-                    case "gold":
-                        generatedImage.blit({src: gold, x: (x + 1) * 30, y: (y + 1) * 30});
-                    break;
-                    case "diamond":
-                        generatedImage.blit({src: diamond, x: (x + 1) * 30, y: (y + 1) * 30});
-                    break;
-                }
+            if (block.visible && !block.mined)
+                generatedImage.blit({src: images.stone, x: pixelX, y: pixelY});
+            else if (block.mined)
+                generatedImage.blit({src: images.stonedark, x: pixelX, y: pixelY});
+
+            if ((block.visible || block.mined) && images[block.type] !== undefined && block.type !== "stone") {
+                generatedImage.blit({src: images[block.type], x: pixelX, y: pixelY});
             }
         }
     }
     
-    generatedImage.blit({src: letterOverlay, x: 0, y: 0});
+    generatedImage.blit({src: images.letterOverlay, x: 0, y: 0});
     let buffer = await generatedImage.getBuffer("image/png");
     let generationTime = performance.now() - generationStart;
 
@@ -253,7 +241,7 @@ exports.calculateRemainingValue = (mine) => {
                 oreCounts[block.type] = 0;
             oreCounts[block.type]++;
             
-            if (block.mined) {
+            if (block.mined && trueTypeof(this.oreValue[block.type]) == "Number") {
                 minedValue += this.oreValue[block.type];
 
                 if (!minedCounts[block.type])
@@ -359,9 +347,9 @@ exports.callback = async (message, args, data) => {
         let blocks = [];
         for (let block of minedBlocks) {
             if (block.type === "stone")
-                blocks.push(`Mined ${emojis[block.type]} **${block.type}** from **${block.key}**`);
+                blocks.push(`Mined ${emojis[block.type]} **${block.type}** from **${block.key.toUpperCase()}**`);
             else
-                blocks.push(`Mined block **${block.key}** and got ${emojis[block.type]} **${block.type}**`);
+                blocks.push(`Mined block **${block.key.toUpperCase()}** and got ${emojis[block.type]} **${block.type}**`);
         }
         messageText += `\n${blocks.join('\n')}`;
     }
