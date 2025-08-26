@@ -5,8 +5,9 @@ global.startupTime = null;
 global.readyTime = null;
 
 
-global.Discord = require('discord.js');
-global.fs      = require('fs');
+global.Discord    = require('discord.js');
+global.downloader = require("image-downloader");
+global.fs         = require('fs');
 
 // Jimp is special and requires this setup
 let {Jimp} = require("jimp");
@@ -16,13 +17,16 @@ require('dotenv').config();
 console.log("NPM dependencies loaded and .env loaded.");
 
 let intents = Discord.GatewayIntentBits;
+let partials = Discord.Partials;
 global.client = new Discord.Client({
     intents: [
+        intents.DirectMessages,
         intents.Guilds,
         intents.GuildMessages,
         intents.GuildMessageReactions,
         intents.MessageContent
-    ]
+    ],
+    partials: [partials.Channel, partials.Message]
 });
 
 global.commands = new Map();
